@@ -1,0 +1,711 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jotun Paints - The Matt Revolution</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Inter', sans-serif;
+            background: #0a0a0a;
+        }
+
+        /* Dashboard (Hidden initially) */
+        #dashboard {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0d1117 0%, #1a1f2e 50%, #0d1117 100%);
+            display: flex;
+            flex-direction: column;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 5;
+            overflow-y: auto;
+        }
+
+        #dashboard.revealed {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        /* Subtle grid pattern on dashboard */
+        #dashboard::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(212, 175, 55, 0.03) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(212, 175, 55, 0.03) 1px, transparent 1px);
+            background-size: 50px 50px;
+            pointer-events: none;
+        }
+
+        /* Logo Container - Fixed at top */
+        .logo-container {
+            flex-shrink: 0;
+            text-align: center;
+            padding: 1.5rem 1rem 1rem;
+            z-index: 10;
+        }
+
+        .logo-container img {
+            height: 55px;
+            width: auto;
+            max-width: 90%;
+            object-fit: contain;
+        }
+
+        /* Dashboard Content */
+        .dashboard-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 1rem 1.5rem 2rem;
+            max-width: 900px;
+            margin: 0 auto;
+            width: 100%;
+            z-index: 10;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1) 0.3s;
+        }
+
+        #dashboard.revealed .dashboard-content {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .dashboard-title {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: clamp(1.5rem, 4.5vw, 2.8rem);
+            font-weight: 600;
+            color: #d4af37;
+            margin-bottom: 2rem;
+            letter-spacing: 0.01em;
+            text-shadow: 0 2px 20px rgba(212, 175, 55, 0.3);
+            line-height: 1.3;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1.25rem;
+            margin-bottom: 2rem;
+            width: 100%;
+        }
+
+        .stat-card {
+            background: rgba(212, 175, 55, 0.05);
+            border: 1px solid rgba(212, 175, 55, 0.2);
+            border-radius: 12px;
+            padding: 1.5rem 1rem;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .stat-card:hover {
+            background: rgba(212, 175, 55, 0.1);
+            border-color: rgba(212, 175, 55, 0.4);
+            transform: translateY(-5px);
+        }
+
+        .stat-number {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #d4af37;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            font-size: 0.85rem;
+            color: #a0a0a0;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+
+        .dashboard-footer {
+            font-size: 0.8rem;
+            color: #666;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            margin-top: 1.5rem;
+        }
+
+        .thank-you-text {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: 1rem;
+            font-weight: 400;
+            color: #d4af37;
+            margin-top: 1rem;
+            opacity: 0.9;
+        }
+
+        /* Canvas Container */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 20;
+            cursor: crosshair;
+            touch-action: none;
+            transition: opacity 1s ease-out;
+        }
+
+        #canvas-container.fade-out {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        #paint-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Progress Indicator */
+        #progress-container {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            text-align: center;
+            transition: opacity 0.5s ease;
+        }
+
+        #progress-container.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .progress-text {
+            font-size: 0.75rem;
+            color: #888;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            margin-bottom: 0.5rem;
+        }
+
+        .progress-bar {
+            width: 200px;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3d4e60, #d4af37);
+            width: 0%;
+            transition: width 0.1s linear;
+        }
+
+        .progress-percentage {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: #d4af37;
+            margin-top: 0.5rem;
+        }
+
+        /* Instructions Overlay */
+        #instructions {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 25;
+            text-align: center;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        #instructions.hidden {
+            opacity: 0;
+        }
+
+        .instruction-text {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 500;
+            color: rgba(255, 255, 255, 0.7);
+            margin-bottom: 1rem;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .instruction-subtext {
+            font-size: 0.85rem;
+            color: rgba(255, 255, 255, 0.4);
+            letter-spacing: 0.1em;
+        }
+
+        .brush-icon {
+            width: 60px;
+            height: 60px;
+            margin: 0 auto 1.5rem;
+            opacity: 0.6;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.1); opacity: 0.8; }
+        }
+
+        /* Success Message */
+        #success-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 35;
+            text-align: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.5s ease;
+        }
+
+        #success-message.visible {
+            opacity: 1;
+        }
+
+        .success-text {
+            font-family: 'Noto Sans', sans-serif;
+            font-size: 2rem;
+            font-weight: 600;
+            color: #d4af37;
+            text-shadow: 0 2px 20px rgba(212, 175, 55, 0.5);
+        }
+
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+            .logo-container {
+                padding: 1rem 0.5rem 0.5rem;
+            }
+
+            .logo-container img {
+                height: 45px;
+            }
+
+            .dashboard-content {
+                padding: 0.5rem 1rem 1.5rem;
+                justify-content: flex-start;
+                padding-top: 0.5rem;
+            }
+
+            .dashboard-title {
+                margin-bottom: 1.25rem;
+                font-size: clamp(1.3rem, 5vw, 1.8rem);
+            }
+
+            .stats-grid {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+                margin-bottom: 1.25rem;
+            }
+
+            .stat-card {
+                padding: 1.25rem 1rem;
+            }
+
+            .stat-number {
+                font-size: 1.8rem;
+            }
+
+            .stat-label {
+                font-size: 0.8rem;
+            }
+
+            .dashboard-footer {
+                margin-top: 1rem;
+                font-size: 0.7rem;
+            }
+
+            .thank-you-text {
+                font-size: 0.85rem;
+                margin-top: 0.75rem;
+            }
+
+            #progress-container {
+                bottom: 1.5rem;
+            }
+        }
+
+        /* Small height screens */
+        @media (max-height: 700px) and (max-width: 768px) {
+            .logo-container img {
+                height: 38px;
+            }
+
+            .dashboard-title {
+                margin-bottom: 0.75rem;
+                font-size: 1.2rem;
+            }
+
+            .stat-card {
+                padding: 1rem;
+            }
+
+            .stat-number {
+                font-size: 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Dashboard (Success State) -->
+    <div id="dashboard">
+        <div class="logo-container">
+            <img src="Jotun_logo.jpg" alt="Jotun Logo">
+        </div>
+        
+        <div class="dashboard-content">
+            <h1 class="dashboard-title">The Matt Revolution:<br>Mission Accomplished</h1>
+            
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number">#1</div>
+                    <div class="stat-label">Rich Matt: Best Seller in MEA</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">#2</div>
+                    <div class="stat-label">Global Ranking: Best Seller</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number">3x</div>
+                    <div class="stat-label">Sales Tripled; Premium Tier Doubled</div>
+                </div>
+            </div>
+            
+            <div class="dashboard-footer">Jotun x Orkla Growth Awards 2026</div>
+            <p class="thank-you-text">Thank you for joining the revolution.</p>
+        </div>
+    </div>
+
+    <!-- Instructions Overlay -->
+    <div id="instructions">
+        <svg class="brush-icon" viewBox="0 0 60 60" fill="none">
+            <path d="M10 50 Q10 45 15 40 L25 30 Q30 25 35 20 L40 15 Q45 10 50 15 Q55 20 50 25 L45 30 Q40 35 35 40 L25 50 Q20 55 15 55 Q10 55 10 50Z" fill="rgba(212, 175, 55, 0.6)"/>
+            <rect x="8" y="48" width="20" height="8" rx="2" fill="#8B4513"/>
+        </svg>
+        <p class="instruction-text">Paint to Reveal</p>
+        <p class="instruction-subtext">Touch & drag to transform</p>
+    </div>
+
+    <!-- Success Message -->
+    <div id="success-message">
+        <p class="success-text">Transformation Complete</p>
+    </div>
+
+    <!-- Progress Indicator -->
+    <div id="progress-container">
+        <p class="progress-text">Coverage</p>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <p class="progress-percentage" id="progress-percentage">0%</p>
+    </div>
+
+    <!-- Canvas Container -->
+    <div id="canvas-container">
+        <canvas id="paint-canvas"></canvas>
+    </div>
+
+    <script>
+        (function() {
+            const canvas = document.getElementById('paint-canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const container = document.getElementById('canvas-container');
+            const dashboard = document.getElementById('dashboard');
+            const progressFill = document.getElementById('progress-fill');
+            const progressPercentage = document.getElementById('progress-percentage');
+            const progressContainer = document.getElementById('progress-container');
+            const instructions = document.getElementById('instructions');
+            const successMessage = document.getElementById('success-message');
+
+            // Configuration
+            const DECO_BLUE = '#3d4e60';
+            const REVEAL_THRESHOLD = 70;
+            const BRUSH_SIZE = 60;
+            const CHECK_INTERVAL = 150; // ms
+
+            // State
+            let isDrawing = false;
+            let lastX = 0;
+            let lastY = 0;
+            let currentPercentage = 0;
+            let isRevealed = false;
+            let lastCheckTime = 0;
+            let pixelsData = null;
+
+            // Set canvas size
+            function resizeCanvas() {
+                const dpr = window.devicePixelRatio || 1;
+                canvas.width = window.innerWidth * dpr;
+                canvas.height = window.innerHeight * dpr;
+                ctx.scale(dpr, dpr);
+                canvas.style.width = window.innerWidth + 'px';
+                canvas.style.height = window.innerHeight + 'px';
+                
+                // Re-initialize the rough texture
+                if (!isRevealed) {
+                    initRoughTexture();
+                }
+            }
+
+            // Generate rough texture (simulating poor quality paint)
+            function initRoughTexture() {
+                const width = canvas.width / (window.devicePixelRatio || 1);
+                const height = canvas.height / (window.devicePixelRatio || 1);
+
+                // Fill with base grey
+                ctx.fillStyle = '#7a7a7a';
+                ctx.fillRect(0, 0, width, height);
+
+                // Add grainy noise texture
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+
+                for (let i = 0; i < data.length; i += 4) {
+                    const noise = (Math.random() - 0.5) * 80;
+                    const baseGrey = 122 + noise;
+                    data[i] = Math.max(0, Math.min(255, baseGrey + (Math.random() - 0.5) * 40));     // R
+                    data[i + 1] = Math.max(0, Math.min(255, baseGrey + (Math.random() - 0.5) * 40)); // G
+                    data[i + 2] = Math.max(0, Math.min(255, baseGrey + (Math.random() - 0.5) * 40)); // B
+                    data[i + 3] = 255; // A
+                }
+
+                ctx.putImageData(imageData, 0, 0);
+
+                // Add rough brush stroke patterns
+                for (let i = 0; i < 200; i++) {
+                    const x = Math.random() * width;
+                    const y = Math.random() * height;
+                    const size = Math.random() * 100 + 50;
+                    const opacity = Math.random() * 0.15 + 0.05;
+                    
+                    ctx.beginPath();
+                    ctx.arc(x, y, size, 0, Math.PI * 2);
+                    ctx.fillStyle = `rgba(${80 + Math.random() * 40}, ${80 + Math.random() * 40}, ${80 + Math.random() * 40}, ${opacity})`;
+                    ctx.fill();
+                }
+
+                // Add streaks and imperfections
+                for (let i = 0; i < 100; i++) {
+                    const x1 = Math.random() * width;
+                    const y1 = Math.random() * height;
+                    const x2 = x1 + (Math.random() - 0.5) * 200;
+                    const y2 = y1 + (Math.random() - 0.5) * 200;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(x1, y1);
+                    ctx.lineTo(x2, y2);
+                    ctx.strokeStyle = `rgba(60, 60, 60, ${Math.random() * 0.3 + 0.1})`;
+                    ctx.lineWidth = Math.random() * 5 + 1;
+                    ctx.stroke();
+                }
+
+                // Store initial pixel data for comparison
+                pixelsData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            }
+
+            // Paint with smooth blue
+            function paint(x, y) {
+                ctx.globalCompositeOperation = 'source-over';
+                
+                // Create gradient for smooth paint effect
+                const gradient = ctx.createRadialGradient(x, y, 0, x, y, BRUSH_SIZE);
+                gradient.addColorStop(0, DECO_BLUE);
+                gradient.addColorStop(0.7, DECO_BLUE);
+                gradient.addColorStop(1, 'rgba(61, 78, 96, 0)');
+
+                ctx.beginPath();
+                ctx.arc(x, y, BRUSH_SIZE, 0, Math.PI * 2);
+                ctx.fillStyle = gradient;
+                ctx.fill();
+
+                // Add subtle shine effect
+                const shineGradient = ctx.createRadialGradient(
+                    x - BRUSH_SIZE * 0.3, y - BRUSH_SIZE * 0.3, 0,
+                    x, y, BRUSH_SIZE * 0.5
+                );
+                shineGradient.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+                shineGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+                
+                ctx.beginPath();
+                ctx.arc(x, y, BRUSH_SIZE * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = shineGradient;
+                ctx.fill();
+            }
+
+            // Draw smooth line between points
+            function drawLine(x1, y1, x2, y2) {
+                const distance = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+                const steps = Math.ceil(distance / 5);
+                
+                for (let i = 0; i <= steps; i++) {
+                    const t = i / steps;
+                    const x = x1 + (x2 - x1) * t;
+                    const y = y1 + (y2 - y1) * t;
+                    paint(x, y);
+                }
+            }
+
+            // Calculate painted percentage
+            function calculatePercentage() {
+                const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                const data = imageData.data;
+                let paintedPixels = 0;
+                const totalPixels = data.length / 4;
+
+                // Sample every 10th pixel for performance
+                const sampleStep = 40;
+                let sampledPixels = 0;
+
+                for (let i = 0; i < data.length; i += sampleStep) {
+                    const r = data[i];
+                    const g = data[i + 1];
+                    const b = data[i + 2];
+
+                    // Check if pixel is blue (painted)
+                    // Deco Blue: #3d4e60 = rgb(61, 78, 96)
+                    const isBlue = (r < 100 && g > 50 && g < 120 && b > 70 && b < 130) ||
+                                   (r > 40 && r < 80 && g > 60 && g < 100 && b > 80 && b < 120);
+
+                    if (isBlue) {
+                        paintedPixels++;
+                    }
+                    sampledPixels++;
+                }
+
+                return Math.round((paintedPixels / sampledPixels) * 100);
+            }
+
+            // Update progress display
+            function updateProgress() {
+                const now = Date.now();
+                if (now - lastCheckTime < CHECK_INTERVAL) return;
+                lastCheckTime = now;
+
+                currentPercentage = calculatePercentage();
+                progressFill.style.width = currentPercentage + '%';
+                progressPercentage.textContent = currentPercentage + '%';
+
+                if (currentPercentage >= REVEAL_THRESHOLD && !isRevealed) {
+                    revealDashboard();
+                }
+            }
+
+            // Reveal the dashboard
+            function revealDashboard() {
+                isRevealed = true;
+                
+                // Show success message briefly
+                successMessage.classList.add('visible');
+                
+                setTimeout(() => {
+                    successMessage.classList.remove('visible');
+                    
+                    // Fade out canvas
+                    container.classList.add('fade-out');
+                    progressContainer.classList.add('hidden');
+                    instructions.classList.add('hidden');
+                    
+                    // Reveal dashboard
+                    setTimeout(() => {
+                        dashboard.classList.add('revealed');
+                    }, 300);
+                }, 800);
+            }
+
+            // Event handlers
+            function getPointerPos(e) {
+                const rect = canvas.getBoundingClientRect();
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+                return {
+                    x: (clientX - rect.left) * (canvas.width / rect.width / (window.devicePixelRatio || 1)),
+                    y: (clientY - rect.top) * (canvas.height / rect.height / (window.devicePixelRatio || 1))
+                };
+            }
+
+            function startDrawing(e) {
+                if (isRevealed) return;
+                isDrawing = true;
+                const pos = getPointerPos(e);
+                lastX = pos.x;
+                lastY = pos.y;
+                paint(lastX, lastY);
+                
+                // Hide instructions on first interaction
+                if (instructions.style.opacity !== '0') {
+                    instructions.classList.add('hidden');
+                }
+            }
+
+            function draw(e) {
+                if (!isDrawing || isRevealed) return;
+                e.preventDefault();
+                
+                const pos = getPointerPos(e);
+                drawLine(lastX, lastY, pos.x, pos.y);
+                lastX = pos.x;
+                lastY = pos.y;
+                
+                updateProgress();
+            }
+
+            function stopDrawing() {
+                isDrawing = false;
+            }
+
+            // Mouse events
+            canvas.addEventListener('mousedown', startDrawing);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stopDrawing);
+            canvas.addEventListener('mouseout', stopDrawing);
+
+            // Touch events
+            canvas.addEventListener('touchstart', startDrawing, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', stopDrawing);
+            canvas.addEventListener('touchcancel', stopDrawing);
+
+            // Window resize
+            let resizeTimeout;
+            window.addEventListener('resize', () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(resizeCanvas, 250);
+            });
+
+            // Initialize
+            resizeCanvas();
+        })();
+    </script>
+</body>
+</html>
